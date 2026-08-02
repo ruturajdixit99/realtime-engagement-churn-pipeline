@@ -5,6 +5,14 @@ in true chronological order, incrementally computes engagement features per user
 events arrive, and scores live disengagement ("about to go quiet") risk with an offline-trained
 classifier — with a live-updating Streamlit dashboard on top.
 
+**Live demo (Next.js/Vercel):** https://realtime-engagement-churn-pipeline-ruturajdixit99s-projects.vercel.app
+**Local dashboard (Streamlit, same pipeline, real server-side threads):** `streamlit run app/streamlit_app.py`
+
+There are two presentation layers on top of the same real Python pipeline, because Streamlit
+needs a persistent server process (background threads, WebSockets) that Vercel's serverless
+model can't run — see [Two front ends, one real pipeline](#two-front-ends-one-real-pipeline)
+below for exactly how the web version differs and why.
+
 ## Real data source used, and why
 
 **Source: the [Last.fm-1K Users dataset](http://ocelma.net/MusicRecommendationDataset/lastfm-1K.html)**
@@ -115,6 +123,7 @@ app/streamlit_app.py — live event feed + live per-user risk table/chart,
 | `train.py` | labeled rows | `churn_model.joblib`, `model_comparison.json` | User-level train/test split, 2-model comparison |
 | `stream_simulator.py` | `events_sample.parquet`, trained model | live in-memory state | Producer/consumer real-time replay + incremental scoring |
 | `streamlit_app.py` | live engine snapshot | UI | Auto-refreshing live dashboard |
+| `export_web_replay.py` | events, labeled data | `web/public/data/*.json` | Stages a real bounded slice + portable model weights for the Vercel app |
 
 ### Why these techniques
 
@@ -187,6 +196,28 @@ shown live come from the same model trained and evaluated in `train.py`.
 
 ---
 
+## Two front ends, one real pipeline
+
+Streamlit apps need a persistent server process — background threads, WebSocket connections for
+auto-refresh — which is exactly what Vercel's serverless model doesn't provide (a serverless
+function is stateless and spins up per-request; there's no way to keep a producer thread alive
+across requests). So making this showcaseable on Vercel meant a second, architecturally
+different front end, not a redeploy of the same app:
+
+| | Streamlit (`app/streamlit_app.py`) | Next.js (`web/`, on Vercel) |
+|---|---|---|
+| Runs on | A persistent Python server (your machine / any host that runs long processes) | Vercel's static hosting + edge, no server process |
+| Replay driver | A real background **producer thread** replaying events server-side | A **client-side timer** replaying a real, bounded event slice in your browser |
+| Event universe | All 150 sampled real users, full real date range | A real, curated ~6-month slice (25 of the 150 real users, Jan–Jun 2009) — kept small enough to ship as a static JSON asset |
+| Scoring model | The trained `sklearn` model loaded directly (`joblib`) | The trained Logistic Regression's exact coefficients, exported to JSON and re-implemented in TypeScript (`web/src/lib/scoreModel.ts`) — `export_web_replay.py` asserts it reproduces `predict_proba` to 1e-6 before export |
+| Incremental features | `UserState` class in Python | `UserState` class ported line-for-line to TypeScript (`web/src/lib/engagementEngine.ts`) — same trailing-time-window approximation, same documented train/serve skew |
+
+Both are real implementations of the same architecture against the same real data — the Next.js
+version just proves it can run with zero server infrastructure, which is what "showcase on
+Vercel" actually requires.
+
+---
+
 ## Dataset used
 
 - **Name:** Last.fm Dataset - 1K users (a.k.a. lastfm-dataset-1K)
@@ -215,22 +246,31 @@ Real numbers from `python -m src.train` (random seed 42):
 
 | Model | ROC-AUC | PR-AUC | Precision | Recall | F1 |
 |---|---|---|---|---|---|
-| Logistic Regression | 0.772 | 0.103 | 0.042 | **0.724** | 0.079 |
-| **Random Forest** | **0.778** | **0.153** | **0.097** | 0.552 | **0.165** |
+| Logistic Regression | 0.773 | 0.116 | 0.043 | **0.724** | 0.081 |
+| **Random Forest** | **0.780** | **0.167** | **0.103** | 0.569 | **0.174** |
 
 Confusion matrices (test set, threshold 0.5):
 
 | Model | TN | FP | FN | TP |
 |---|---|---|---|---|
-| Logistic Regression | 1,827 | 959 | 16 | 42 |
-| Random Forest | 2,489 | 297 | 26 | 32 |
+| Logistic Regression | 1,850 | 936 | 16 | 42 |
+| Random Forest | 2,497 | 289 | 25 | 33 |
 
 Both models clearly separate signal from noise (ROC-AUC ~0.77-0.78, well above the 0.5
 random baseline) despite a genuinely hard, severely imbalanced real-world problem. Logistic
 Regression catches 72% of real disengagement events (high recall) at the cost of a lot of false
-alarms (precision 4.2%); Random Forest trades some recall for meaningfully better precision and
+alarms (precision 4.3%); Random Forest trades some recall for meaningfully better precision and
 PR-AUC. Under this imbalance, **PR-AUC is the more honest headline metric than ROC-AUC** — Random
-Forest's 0.153 vs. a 0.022 no-skill baseline is a real ~7× lift.
+Forest's 0.167 vs. a 0.022 no-skill baseline is a real ~7.5× lift.
+
+*(These numbers reflect a fix made during development: `weeks_since_active` was originally
+computed as a streak that resets to 0 on any active week — which made it identically 0 across
+the entire labeled dataset, since every labeled row **is** an active week, silently contributing
+nothing. Fixed by shifting the streak by one row so it reports the silence immediately
+**preceding** a return to activity — real signal: disengaging weeks average 2.5 prior silent
+weeks vs. 0.3 for retained weeks. Caught by noticing `weeks_since_active.std() == 0` during
+review, the same way the earlier week-anchor bug was caught: a summary statistic that shouldn't
+be exactly zero, was.)*
 
 ---
 
@@ -259,6 +299,22 @@ streamlit run app/streamlit_app.py
 
 Press **Start** in the sidebar to begin streaming real historical events; the event feed and
 live churn-risk table update every 1.5 seconds as the replay progresses.
+
+### Web app (`web/`, deployable to Vercel)
+
+```bash
+# From the project root, after running the Python steps above at least once:
+python -m src.export_web_replay    # stages real replay slice + model weights into web/public/data/
+
+cd web
+npm install
+npm run dev        # http://localhost:3000
+# or deploy:
+vercel --prod
+```
+
+The committed `web/public/data/*.json` already reflects the numbers in this README, so
+`cd web && npm install && npm run dev` works standalone without re-running the Python pipeline.
 
 ---
 

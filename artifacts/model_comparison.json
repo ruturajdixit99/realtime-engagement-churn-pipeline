@@ -8,29 +8,29 @@
   "disengagement_rate": 0.0223,
   "results": {
     "logistic_regression": {
-      "roc_auc": 0.7719,
-      "pr_auc": 0.1034,
-      "precision": 0.042,
+      "roc_auc": 0.7725,
+      "pr_auc": 0.1156,
+      "precision": 0.0429,
       "recall": 0.7241,
-      "f1": 0.0793,
+      "f1": 0.0811,
       "confusion_matrix": {
-        "tn": 1827,
-        "fp": 959,
+        "tn": 1850,
+        "fp": 936,
         "fn": 16,
         "tp": 42
       }
     },
     "random_forest": {
-      "roc_auc": 0.778,
-      "pr_auc": 0.1526,
-      "precision": 0.0973,
-      "recall": 0.5517,
-      "f1": 0.1654,
+      "roc_auc": 0.7802,
+      "pr_auc": 0.1673,
+      "precision": 0.1025,
+      "recall": 0.569,
+      "f1": 0.1737,
       "confusion_matrix": {
-        "tn": 2489,
-        "fp": 297,
-        "fn": 26,
-        "tp": 32
+        "tn": 2497,
+        "fp": 289,
+        "fn": 25,
+        "tp": 33
       }
     }
   }

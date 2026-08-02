@@ -84,10 +84,13 @@ def add_rolling_features(weekly_full: pd.DataFrame) -> pd.DataFrame:
     df["sessions_trend"] = df["sessions_count"] - (df["prior_rolling_sessions"] / w)
     df["sessions_trend"] = df["sessions_trend"].fillna(0)
 
-    # Weeks since last active week (recency), computed causally (no
-    # look-ahead): 0 if active this week, else running count of consecutive
-    # zero weeks up to and including this one.
-    def weeks_since_active(s: pd.Series) -> pd.Series:
+    # Weeks of silence immediately BEFORE this row (recency), computed
+    # causally (no look-ahead). A streak-ending-at-row-i value is 0 for any
+    # active row by construction, which would make this feature degenerate
+    # (always 0) on the labeled dataset -- every labeled row IS an active
+    # week. Shifting the streak back by one row fixes this: for an active
+    # row, it reports how many consecutive weeks of silence preceded it.
+    def silence_streak_ending_at(s: pd.Series) -> pd.Series:
         out = np.zeros(len(s), dtype=int)
         streak = 0
         for i, active in enumerate((s > 0).values):
@@ -95,7 +98,9 @@ def add_rolling_features(weekly_full: pd.DataFrame) -> pd.DataFrame:
             out[i] = streak
         return pd.Series(out, index=s.index)
 
-    df["weeks_since_active"] = grouped["sessions_count"].transform(weeks_since_active)
+    df["_silence_streak"] = grouped["sessions_count"].transform(silence_streak_ending_at)
+    df["weeks_since_active"] = df.groupby("user_id")["_silence_streak"].shift(1).fillna(0)
+    df = df.drop(columns=["_silence_streak"])
 
     return df.drop(columns=["prior_rolling_sessions"])
 

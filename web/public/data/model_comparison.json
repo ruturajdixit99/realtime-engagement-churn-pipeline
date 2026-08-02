@@ -1,0 +1,37 @@
+{
+  "n_labeled_user_weeks": 12693,
+  "n_users": 150,
+  "n_train_rows": 9849,
+  "n_test_rows": 2844,
+  "n_train_users": 120,
+  "n_test_users": 30,
+  "disengagement_rate": 0.0223,
+  "results": {
+    "logistic_regression": {
+      "roc_auc": 0.7725,
+      "pr_auc": 0.1156,
+      "precision": 0.0429,
+      "recall": 0.7241,
+      "f1": 0.0811,
+      "confusion_matrix": {
+        "tn": 1850,
+        "fp": 936,
+        "fn": 16,
+        "tp": 42
+      }
+    },
+    "random_forest": {
+      "roc_auc": 0.7802,
+      "pr_auc": 0.1673,
+      "precision": 0.1025,
+      "recall": 0.569,
+      "f1": 0.1737,
+      "confusion_matrix": {
+        "tn": 2497,
+        "fp": 289,
+        "fn": 25,
+        "tp": 33
+      }
+    }
+  }
+}

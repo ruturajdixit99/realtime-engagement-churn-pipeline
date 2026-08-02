@@ -1,0 +1,68 @@
+{
+  "n_users": 150,
+  "n_events": 2845049,
+  "n_sessions": 134631,
+  "n_labeled_user_weeks": 12693,
+  "disengagement_rate": 0.0223,
+  "date_range": [
+    "2005-02-14T12:02:39+00:00",
+    "2013-09-29T18:32:04+00:00"
+  ],
+  "feature_comparison": [
+    {
+      "feature": "sessions_count",
+      "retained_avg": 10.4961,
+      "disengaging_avg": 3.742
+    },
+    {
+      "feature": "tracks_count",
+      "retained_avg": 222.247,
+      "disengaging_avg": 64.742
+    },
+    {
+      "feature": "unique_artists",
+      "retained_avg": 82.5695,
+      "disengaging_avg": 26.3498
+    },
+    {
+      "feature": "repeat_rate",
+      "retained_avg": 0.2178,
+      "disengaging_avg": 0.2038
+    },
+    {
+      "feature": "avg_session_minutes",
+      "retained_avg": 99.302,
+      "disengaging_avg": 66.0211
+    },
+    {
+      "feature": "rolling_sessions",
+      "retained_avg": 39.8795,
+      "disengaging_avg": 15.8975
+    },
+    {
+      "feature": "rolling_tracks",
+      "retained_avg": 848.6922,
+      "disengaging_avg": 293.159
+    },
+    {
+      "feature": "rolling_unique_artists",
+      "retained_avg": 80.2033,
+      "disengaging_avg": 27.9782
+    },
+    {
+      "feature": "rolling_repeat_rate",
+      "retained_avg": 0.2029,
+      "disengaging_avg": 0.1609
+    },
+    {
+      "feature": "sessions_trend",
+      "retained_avg": 0.7186,
+      "disengaging_avg": -0.424
+    },
+    {
+      "feature": "weeks_since_active",
+      "retained_avg": 0.2915,
+      "disengaging_avg": 2.5159
+    }
+  ]
+}
